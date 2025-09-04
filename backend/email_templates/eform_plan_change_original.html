@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>{{ subject or "[이폼사인] 요금제 변경 방법 안내" }}</title>
+</head>
+<body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height:1.7; font-size:14px; color:#222;">
+<p>안녕하세요, {{ recipient_name or manager }}.</p>
+<p>유선으로 인사드린 이폼사인 {{ sender_name or "김서은" }} {{ sender_title or "프로" }}입니다.</p>
+
+<p>추후 유료로 전환하여 사용하실 때 참고하시도록,<br>
+이폼사인 로그인 화면에서 요금제를 변경하는 방법을 안내드립니다.</p>
+
+<p>아래 페이지에서 요금제를 확인하신 뒤,<br>
+화면 안내에 따라 원하시는 요금제로 변경하여 이용해 주시면 됩니다.</p>
+
+<p>▶️요금제 안내 - <a href="{{ pricing_url or '#' }}" target="_blank" rel="noopener">바로가기</a></p>
+
+<p>(1) 로그인 후 좌측 상단 (☰) 클릭<br>
+{% if image1_url %}<img src="{{ image1_url }}" alt="요금제 변경(1)" style="max-width:100%;height:auto;" /><br>{% endif %}
+요금제 변경(1).png</p>
+
+<p>(2) 스크롤 내린 후 요금관리 ▶ 요금제 클릭<br>
+{% if image2_url %}<img src="{{ image2_url }}" alt="요금제 변경(2)" style="max-width:100%;height:auto;" /><br>{% endif %}
+요금제 변경(2).png</p>
+
+<p>(3) 충전형 요금제의 경우 우측 하단 구매하기 클릭<br>
+{% if image3_url %}<img src="{{ image3_url }}" alt="요금제 변경(구매하기)" style="max-width:100%;height:auto;" /><br>{% endif %}
+요금제 변경(구매하기).png</p>
+
+<p>(4) 문서/크레딧 충전하기 문서 건수 입력 ▶ 담당자 연락처 등록 ▶ 결제하기 클릭</p>
+<p>*크레딧 이란?<br>
+- SMS 인증 20원/건, 휴대폰/인증서 본인확인 50원/건 등 옵션 사용을 위해 미리 충전해야 하는 금액<br>
+- 구독형 요금제의 경우 별도의 크레딧 충전은 불필요하며 옵션 사용량만큼 건당 계산되어 후불 청구</p>
+{% if image4_url %}<p><img src="{{ image4_url }}" alt="요금제 변경(4)" style="max-width:100%;height:auto;" /></p>{% endif %}
+<p>요금제 변경(4).png</p>
+
+<p>구독형 요금제 이용을 원하실 경우, 희망하시는 구독형 요금제 하단의<br>
+[요금제 변경하기] 버튼을 클릭하여 결제를 진행해 주시면 됩니다.</p>
+
+<p>감사합니다.<br>{{ sender_name or "김서은" }} 드림.</p>
+<hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+<p>
+{{ sender_name or "김서은" }} | SEOEUN KIM<br>
+{{ sender_team or "클라우드사업본부" }} {{ sender_title or "프로" }}<br>
+{{ sender_company or "(주)포시에스" }} | {{ sender_addr or "서울시 강남구 논현로 646" }}<br><br>
+T. {{ sender_tel or "02-6188-8411" }}<br>
+E. {{ sender_email or "seoeun@forcs.com" }}<br>
+W. <a href="{{ sender_www or 'https://www.forcs.com' }}" target="_blank">www.forcs.com</a> | <a href="{{ sender_eform or 'https://www.eformsign.com' }}" target="_blank">www.eformsign.com</a><br>
+간편하게, 안전하게, 스마트하게. 비대면 전자계약은 이폼사인
+</p>
+</body>
+</html>
