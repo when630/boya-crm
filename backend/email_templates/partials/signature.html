@@ -1,0 +1,37 @@
+<!-- 이메일 서명 + 배너 (테이블 기반, 다양한 메일클라이언트 호환) -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; margin-top:24px;">
+  <tr>
+    <td style="border-top:1px solid #e5e7eb; padding-top:16px; font-size:14px; line-height:1.7; color:#111827;">
+      <div style="font-weight:700; font-size:18px; color:#1f2937;">
+        {{ sender_name or "김서은" }} <span style="color:#6b7280; font-weight:600;">| SEOEUN KIM</span>
+      </div>
+      <div style="margin-top:4px;">{{ sender_team or "클라우드사업본부" }} {{ sender_title or "프로" }}</div>
+
+      <div style="height:12px;"></div>
+
+      <div>{{ sender_company or "(주)포시에스" }} | {{ sender_addr or "서울시 강남구 논현로 646" }}</div>
+      <div style="margin-top:4px;">
+        <span style="color:#2563eb;">T.</span> {{ sender_tel or "02-6188-8411" }}
+      </div>
+      <div style="margin-top:4px;">
+        <span style="color:#2563eb;">E.</span>
+        <a href="mailto:{{ sender_email or 'seoeun@forcs.com' }}" target="_blank" style="color:#2563eb; text-decoration:underline;">
+          {{ sender_email or "seoeun@forcs.com" }}
+        </a>
+        &nbsp;&nbsp; <span style="color:#2563eb;">W.</span>
+        <a href="{{ sender_www or 'https://www.forcs.com' }}" target="_blank" style="color:#2563eb; text-decoration:underline;">www.forcs.com</a>
+        &nbsp;|&nbsp;
+        <a href="{{ sender_eform or 'https://www.eformsign.com' }}" target="_blank" style="color:#2563eb; text-decoration:underline;">www.eformsign.com</a>
+      </div>
+
+      <!-- 배너 (클릭 가능). 복사가 어려우면 첨부파일 저장 안내 문구는 필요 시 추가 -->
+      <div style="margin-top:16px;">
+        <a href="{{ sender_eform or 'https://www.eformsign.com' }}" target="_blank" rel="noopener">
+          <img src="{{ cid('sig_banner') }}"
+               alt="간편하게, 안전하게, 스마트하게. 비대면 전자계약은 이폼사인"
+               style="display:block; max-width:500px; height:auto; border:0; outline:0;" />
+        </a>
+      </div>
+    </td>
+  </tr>
+</table>

@@ -23,8 +23,8 @@ const TEST_COLLECTION = createListCollection({
 // 마케팅수신동의 (시트의 실제 값과 동일하게: 동의/미동의)
 const MKT_COLLECTION = createListCollection({
   items: [
-    { label: "동의", value: "동의" },
-    { label: "미동의", value: "미동의" },
+    { label: "동의", value: "Y" },
+    { label: "미동의", value: "N" },
   ],
 });
 

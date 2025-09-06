@@ -19,6 +19,16 @@ export async function sendMail(body: any) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+
+  // 본문을 먼저 텍스트로 읽고, 가능하면 JSON 파싱
+  const text = await res.text();
+  let data: any = null;
+  try { data = JSON.parse(text); } catch {}
+
+  if (!res.ok) {
+    // 백엔드가 내려준 상세 에러를 우선 노출
+    const detail = data?.error || text || `HTTP ${res.status}`;
+    throw new Error(detail);
+  }
+  return data ?? {};
 }

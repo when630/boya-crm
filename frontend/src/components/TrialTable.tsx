@@ -45,10 +45,10 @@ export default function TrialTable({
   
 const defaultColumns = useMemo<ColumnDef<any, any>[]>(() => {
   return [
-    { accessorKey: "_id", header: "ID" },
+    // { accessorKey: "_id", header: "ID" },
     { accessorKey: "유입월", header: "유입월" },
     { accessorKey: "가입일", header: "가입일" },
-    { accessorKey: "회사 ID", header: "회사 ID" },
+    // { accessorKey: "회사 ID", header: "회사 ID" },
     { accessorKey: "회사명", header: "회사명" },
     { accessorKey: "마케팅수신동의", header: "마케팅수신동의" },
     { accessorKey: "연락처", header: "연락처" },
@@ -65,8 +65,8 @@ const defaultColumns = useMemo<ColumnDef<any, any>[]>(() => {
     { accessorKey: "D7_2", header: "D7(2)" },
     { accessorKey: "M1_2", header: "M1(2)" },
 
-    { accessorKey: "상담내용", header: "상담내용" },
-    { accessorKey: "후속조치", header: "후속조치" },
+    // { accessorKey: "상담내용", header: "상담내용" },
+    // { accessorKey: "후속조치", header: "후속조치" },
     { accessorKey: "종료일", header: "종료일" },
     { accessorKey: "_sheet", header: "시트" },
   ];
