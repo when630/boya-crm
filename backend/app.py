@@ -82,46 +82,77 @@ env.globals["asset"] = lambda p: f"{ASSET_BASE}{p if p.startswith('/') else '/'+
 # 템플릿 목록 (클린 제거, 원본 3종)
 TEMPLATE_CATALOG = [
     {
-        "id": "eform_plan_change_original.html",
-        "label": "[이폼사인] 요금제 변경 방법 안내(원본)",
+        "id": "eform_plan_change.html",
+        "label": "[이폼사인] 요금제 변경 방법 안내",
         "default_subject": "[이폼사인] 요금제 변경 방법 안내",
     },
     {
-        "id": "eform_pay_prepaid_add_original.html",
-        "label": "[이폼사인] 충전형 결제 방법 안내 (추가 구매/원본)",
+        "id": "eform_pay_prepaid_add.html",
+        "label": "[이폼사인] 충전형 결제 방법 안내 (추가 구매)",
         "default_subject": "[이폼사인] 충전형 결제 방법 안내 (추가 구매하기)",
     },
     {
-        "id": "eform_pay_prepaid_buy_original.html",
-        "label": "[이폼사인] 충전형 결제 방법 안내 (구매하기/원본)",
+        "id": "eform_pay_prepaid_buy.html",
+        "label": "[이폼사인] 충전형 결제 방법 안내 (구매하기)",
         "default_subject": "[이폼사인] 충전형 결제 방법 안내 (구매하기)",
+    },
+    {
+        "id": "eform_company_seal_guide.html",
+        "label": "[이폼사인] 회사 도장 등록 방법 안내",
+        "default_subject": "[이폼사인] 회사 도장 등록 방법 안내",
+    },
+    {
+        "id": "eform_user_training_request.html",
+        "label": "[이폼사인] 사용자 교육 신청 안내",
+        "default_subject": "[이폼사인] 사용자 교육 신청 안내",
+    },
+    {
+        "id": "eform_password_reset_change.html",
+        "label": "[이폼사인] 비밀번호 초기화 및 변경 방법 안내",
+        "default_subject": "[이폼사인] 비밀번호 초기화 및 변경 방법 안내",
     },
 ]
 
 # 템플릿별 인라인 이미지 매핑 (cid → 파일경로) — 파일은 backend/assets/email/ 하위
 TEMPLATE_INLINE_MAP: Dict[str, Dict[str, str]] = {
-    "eform_plan_change_original.html": {
-        "img1": "assets/email/plan-1.png",
-        "img2": "assets/email/plan-2.png",
-        "img3": "assets/email/buy.png",
-        "img4": "assets/email/plan-4.png",
+    "eform_plan_change.html": {
+        "img1": "assets/email/요금제 변경(1).png",
+        "img2": "assets/email/요금제 변경(2).png",
+        "img3": "assets/email/요금제 변경(구매하기).png",
+        "img4": "assets/email/요금제 변경(4).png",
     },
-    "eform_pay_prepaid_add_original.html": {
-        "img1": "assets/email/plan-1.png",
-        "img2": "assets/email/plan-2.png",
-        "img3": "assets/email/add.png",
-        "img4": "assets/email/plan-4.png",
+    "eform_pay_prepaid_add.html": {
+        "img1": "assets/email/요금제 변경(1).png",
+        "img2": "assets/email/요금제 변경(2).png",
+        "img3": "assets/email/요금제 변경(추가구매).png",
+        "img4": "assets/email/요금제 변경(4).png",
     },
-    "eform_pay_prepaid_buy_original.html": {
-        "img1": "assets/email/plan-1.png",
-        "img2": "assets/email/plan-2.png",
-        "img3": "assets/email/buy.png",
-        "img4": "assets/email/plan-4.png",
+    "eform_pay_prepaid_buy.html": {
+        "img1": "assets/email/요금제 변경(1).png",
+        "img2": "assets/email/요금제 변경(2).png",
+        "img3": "assets/email/요금제 변경(구매하기).png",
+        "img4": "assets/email/요금제 변경(4).png",
+    },
+    "eform_company_seal_guide.html": {
+        "img1": "assets/email/회사 도장 등록(1).png",
+        "img2": "assets/email/회사 도장 등록(2).png",
+        "img3": "assets/email/회사 도장 등록(3).png",
+        "img4": "assets/email/회사 도장 등록(4).png",
+        "img5": "assets/email/회사 도장 등록(5).png",
+    },
+    "eform_user_training_request.html": {
+
+    },
+    "eform_password_reset_change.html": {
+        "img1": "assets/email/비밀번호 변경(1).png",
+        "img2": "assets/email/비밀번호 변경(2).png",
+        "img3": "assets/email/비밀번호 변경(3).png",
+        "img4": "assets/email/비밀번호 변경(4).png",
     },
 }
 
 # ✅ 공통 배너(서명용) CID 추가: 모든 템플릿에 sig_banner 포함
-COMMON_INLINE = {"sig_banner": "assets/email/signature-banner.png"}
+COMMON_INLINE = {"sig_banner": "assets/email/이폼사인 배너.png"}
 for key in list(TEMPLATE_INLINE_MAP.keys()):
     TEMPLATE_INLINE_MAP[key] = {**TEMPLATE_INLINE_MAP[key], **COMMON_INLINE}
 
@@ -565,6 +596,7 @@ def send_mail():
         "end_date": item.get(COLS["end_date"], ""),
         "item": item,
         "subject": subject,
+        "email": email,
         **DEFAULT_SENDER_CONTEXT,
         **extra_ctx,
     }
@@ -627,6 +659,7 @@ def preview_mail():
         return resp
     item = resp.get_json()
 
+    email = (item.get(COLS["email"], "") or "").strip()
     manager = (item.get(COLS["manager"], "") or "").strip()
     company = (item.get(COLS["company"], "") or "").strip()
 
@@ -638,6 +671,7 @@ def preview_mail():
         "end_date": item.get(COLS["end_date"], ""),
         "item": item,
         "subject": subject,
+        "email": email,
         **DEFAULT_SENDER_CONTEXT,
         **extra_ctx,
     }
