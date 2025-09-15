@@ -3,10 +3,9 @@ import { useState } from "react";
 
 type Props = { onApply: (p: Record<string, string>) => void };
 
-// 시트 선택
+// 시트 선택 (ALL 제거)
 const SHEET_COLLECTION = createListCollection({
   items: [
-    { label: "모든 시트", value: "ALL" },
     { label: "트라이얼(Y)", value: "Y" },
     { label: "트라이얼(N)", value: "N" },
   ],
@@ -20,18 +19,18 @@ const TEST_COLLECTION = createListCollection({
   ],
 });
 
-// 마케팅수신동의 (시트의 실제 값과 동일하게: 동의/미동의)
+// 마케팅수신동의 (시트 실제 값과 맞춤: 동의/미동의)
 const MKT_COLLECTION = createListCollection({
   items: [
-    { label: "동의", value: "Y" },
-    { label: "미동의", value: "N" },
+    { label: "Y", value: "Y" },
+    { label: "N", value: "N" },
   ],
 });
 
 // 메타(구분/요약) 행 보기 모드
 const META_COLLECTION = createListCollection({
   items: [
-    { label: "데이터만", value: "exclude" }, // 기본(메타 제외)
+    { label: "데이터만", value: "exclude" },
     { label: "메타만", value: "only" },
     { label: "모두 보기", value: "include" },
   ],
@@ -39,10 +38,10 @@ const META_COLLECTION = createListCollection({
 
 export default function TrialFilters({ onApply }: Props) {
   const [q, setQ] = useState("");
-  const [sheet, setSheet] = useState<"ALL" | "Y" | "N">("ALL");
+  const [sheet, setSheet] = useState<"Y" | "N">("Y"); // 기본 Y
   const [isTest, setIsTest] = useState<"" | "Y" | "N">("");
-  const [mkt, setMkt] = useState<"" | "동의" | "미동의">("");
-  const [meta, setMeta] = useState<"exclude" | "only" | "include">("exclude"); // 🔹 추가
+  const [mkt, setMkt] = useState<"" | "Y" | "N">("");
+  const [meta, setMeta] = useState<"exclude" | "only" | "include">("exclude");
 
   return (
     <HStack gap={3} wrap="wrap">
@@ -53,28 +52,19 @@ export default function TrialFilters({ onApply }: Props) {
         width="360px"
       />
 
-      {/* 시트 */}
+      {/* 시트 (Y/N) */}
       <Select.Root
         collection={SHEET_COLLECTION}
-        value={sheet ? [sheet] : []}
-        onValueChange={(e) => setSheet((e.value[0] ?? "ALL") as "ALL" | "Y" | "N")}
+        value={[sheet]}
+        onValueChange={(e) => setSheet((e.value[0] ?? "Y") as "Y" | "N")}
         size="sm"
         width="180px"
       >
         <Select.Label>시트</Select.Label>
         <Select.Control>
           <Select.Trigger>
-            <Select.ValueText placeholder="모든 시트" />
+            <Select.ValueText />
           </Select.Trigger>
-          <Select.IndicatorGroup>
-            <Select.Indicator />
-            <Select.ClearTrigger
-              onClick={(ev) => {
-                ev.stopPropagation();
-                setSheet("ALL");
-              }}
-            />
-          </Select.IndicatorGroup>
         </Select.Control>
         <Select.Positioner>
           <Select.Content>
@@ -121,11 +111,11 @@ export default function TrialFilters({ onApply }: Props) {
         </Select.Positioner>
       </Select.Root>
 
-      {/* 마케팅수신동의 (값을 동의/미동의로 맞춤) */}
+      {/* 마케팅수신동의 */}
       <Select.Root
         collection={MKT_COLLECTION}
         value={mkt ? [mkt] : []}
-        onValueChange={(e) => setMkt((e.value[0] ?? "") as "" | "동의" | "미동의")}
+        onValueChange={(e) => setMkt((e.value[0] ?? "") as "" | "Y" | "N")}
         size="sm"
         width="160px"
       >
@@ -155,7 +145,7 @@ export default function TrialFilters({ onApply }: Props) {
         </Select.Positioner>
       </Select.Root>
 
-      {/* 🔹 메타 행 보기 모드 */}
+      {/* 메타 행 보기 */}
       <Select.Root
         collection={META_COLLECTION}
         value={[meta]}
@@ -166,7 +156,7 @@ export default function TrialFilters({ onApply }: Props) {
         <Select.Label>행 타입</Select.Label>
         <Select.Control>
           <Select.Trigger>
-            <Select.ValueText placeholder="행 타입" />
+            <Select.ValueText />
           </Select.Trigger>
         </Select.Control>
         <Select.Positioner>
@@ -185,8 +175,8 @@ export default function TrialFilters({ onApply }: Props) {
         onClick={() =>
           onApply({
             q,
-            sheet,
-            meta, // 🔹 백엔드로 meta 전달
+            sheet,  // ✅ 엔드포인트 선택에 사용됨
+            meta,   // ✅ 백엔드에서 meta 모드 적용
             ["테스트 여부"]: isTest,
             ["마케팅수신동의"]: mkt,
           })

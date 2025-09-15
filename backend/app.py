@@ -17,6 +17,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.auth.exceptions import RefreshError
 
 # 이메일(MIME)
 from email.mime.text import MIMEText
@@ -31,6 +32,7 @@ load_dotenv()
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets.readonly",
     "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.readonly",  # ⬅️ 추가
 ]
 SHEET_ID = os.getenv("SHEET_ID")
 SHEET_NAME_Y = os.getenv("SHEET_NAME_Y", "트라이얼(Y)")
@@ -54,17 +56,25 @@ COLS = {
     "manager": "담당자",
     "email": "이메일",
     "is_test": "테스트 여부",
+
     "contact1": "1차 컨택",
     "contact2": "2차 컨택",
     "contact3": "3차 컨택 (종료일)",
+
+    # D7/M1은 두 번씩 나오므로 파생키로 나눔
     "d7_1": "D7",
     "m1_1": "M1",
+
+    "first_consult": "최초 상담일",
+    "conversion_date": "전환일",
     "memo": "상담내용",
     "action": "후속조치",
     "end_date": "종료일",
+
     "d7_2": "D7",
     "m1_2": "M1",
-    "snapshot": "8/28",
+
+    "snapshot": "TTC",
 }
 
 # -----------------------------
@@ -79,7 +89,7 @@ env.globals["cid"] = lambda name: f"cid:{name}"
 ASSET_BASE = os.getenv("ASSET_BASE", ORIGIN)
 env.globals["asset"] = lambda p: f"{ASSET_BASE}{p if p.startswith('/') else '/'+p}"
 
-# 템플릿 목록 (클린 제거, 원본 3종)
+# 템플릿 목록
 TEMPLATE_CATALOG = [
     {
         "id": "eform_plan_change.html",
@@ -141,7 +151,7 @@ TEMPLATE_INLINE_MAP: Dict[str, Dict[str, str]] = {
         "img5": "assets/email/회사 도장 등록(5).png",
     },
     "eform_user_training_request.html": {
-
+        # 이미지 없음
     },
     "eform_password_reset_change.html": {
         "img1": "assets/email/비밀번호 변경(1).png",
@@ -239,6 +249,43 @@ def sheets_service():
 def gmail_service():
     return build("gmail", "v1", credentials=get_creds())
 
+def get_creds():
+    creds = None
+    token_path = "token.json"
+    try:
+        if os.path.exists(token_path):
+            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                try:
+                    from google.auth.transport.requests import Request
+                    creds.refresh(Request())
+                except RefreshError as e:
+                    # 흔한 케이스: invalid_grant (만료/취소)
+                    try:
+                        os.remove(token_path)
+                    except Exception:
+                        pass
+                    creds = None  # 아래 재인증으로 진행
+            if not creds or not creds.valid:
+                flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+                creds = flow.run_local_server(port=0)
+            with open(token_path, "w") as f:
+                f.write(creds.to_json())
+        return creds
+    except Exception as e:
+        # 마지막 안전장치: token.json 날리고 재인증 시도
+        try:
+            if os.path.exists(token_path):
+                os.remove(token_path)
+        except Exception:
+            pass
+        flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+        creds = flow.run_local_server(port=0)
+        with open(token_path, "w") as f:
+            f.write(creds.to_json())
+        return creds
+
 # -----------------------------
 # 유틸
 # -----------------------------
@@ -333,6 +380,11 @@ def read_sheet(sheet_name: str, mode: str = "data"):
         if mode == "meta" and not noise:
             continue
 
+        # ⚠️ N시트엔 "2차 컨택 (종료일)"만 있는 케이스가 있으니 보정
+        if "2차 컨택" not in item or not item.get("2차 컨택", ""):
+            if "2차 컨택 (종료일)" in item and item.get("2차 컨택 (종료일)"):
+                item["2차 컨택"] = item.get("2차 컨택 (종료일)", "")
+
         out.append(item)
     return out
 
@@ -343,6 +395,43 @@ def parse_date(s: str):
         except Exception:
             pass
     return None
+
+def _apply_filters_from_request(data: List[dict]) -> List[dict]:
+    """q/equals/sortBy/sortDir 필터를 공통 적용"""
+    q = (request.args.get("q") or "").strip().lower()
+    if q:
+        def hay(x):
+            return " ".join([
+                x.get(COLS["company"], ""),
+                x.get(COLS["manager"], ""),
+                x.get(COLS["email"], ""),
+                x.get(COLS["memo"], ""),
+                x.get(COLS["action"], ""),
+                x.get(COLS["phone"], ""),
+                x.get(COLS["company_id"], ""),
+                x.get(COLS["inflow_month"], ""),
+            ]).lower()
+        data = [x for x in data if q in hay(x)]
+
+    # equals 필터(임의 키 = 값)
+    for key, value in request.args.items():
+        if key in ("q", "sortBy", "sortDir", "meta"):
+            continue
+        if value == "":
+            continue
+        data = [x for x in data if x.get(key, "") == value]
+
+    sort_by = request.args.get("sortBy")
+    sort_dir = (request.args.get("sortDir") or "asc").lower()
+    if sort_by:
+        def sort_key(x):
+            v = x.get(sort_by, "")
+            d = parse_date(v)
+            return (0, d) if d else (1, v)
+        data.sort(key=sort_key)
+        if sort_dir == "desc":
+            data.reverse()
+    return data
 
 def create_gmail_message(to: str, subject: str, html: str) -> dict:
     msg = MIMEText(html, "html", "utf-8")
@@ -446,16 +535,10 @@ def root():
 def health():
     return {"ok": True}
 
-@app.get("/api/trials")
-def list_trials():
-    """
-    두 시트 병합 후 서버에서 1차 필터/정렬.
-      - meta: exclude(기본) | include | only
-      - q: 키워드(회사명/담당자/이메일/상담내용/후속조치/연락처/회사ID/유입월)
-      - sheet: ALL|Y|N
-      - sortBy / sortDir
-      - 기타 실제 헤더 equals 필터
-    """
+# ✨ 분리된 목록 엔드포인트 (ALL 제거)
+@app.get("/api/trials/y")
+def list_trials_y():
+    """트라이얼(Y) 시트 전용 목록"""
     meta_mode = (request.args.get("meta") or "exclude").lower()
     if meta_mode == "only":
         mode = "meta"
@@ -463,48 +546,22 @@ def list_trials():
         mode = "all"
     else:
         mode = "data"
+    data = read_sheet(SHEET_NAME_Y, mode=mode)
+    data = _apply_filters_from_request(data)
+    return jsonify({"count": len(data), "items": data})
 
-    data = read_sheet(SHEET_NAME_Y, mode=mode) + read_sheet(SHEET_NAME_N, mode=mode)
-
-    sheet_filter = (request.args.get("sheet") or "ALL").upper()
-    if sheet_filter == "Y":
-        data = [x for x in data if x.get("_sheet") == SHEET_NAME_Y]
-    elif sheet_filter == "N":
-        data = [x for x in data if x.get("_sheet") == SHEET_NAME_N]
-
-    q = (request.args.get("q") or "").strip().lower()
-    if q:
-        def hay(x):
-            return " ".join([
-                x.get(COLS["company"], ""),
-                x.get(COLS["manager"], ""),
-                x.get(COLS["email"], ""),
-                x.get(COLS["memo"], ""),
-                x.get(COLS["action"], ""),
-                x.get(COLS["phone"], ""),
-                x.get(COLS["company_id"], ""),
-                x.get(COLS["inflow_month"], ""),
-            ]).lower()
-        data = [x for x in data if q in hay(x)]
-
-    for key, value in request.args.items():
-        if key in ("q", "sheet", "sortBy", "sortDir", "meta"):
-            continue
-        if value == "":
-            continue
-        data = [x for x in data if x.get(key, "") == value]
-
-    sort_by = request.args.get("sortBy")
-    sort_dir = (request.args.get("sortDir") or "asc").lower()
-    if sort_by:
-        def sort_key(x):
-            v = x.get(sort_by, "")
-            d = parse_date(v)
-            return (0, d) if d else (1, v)
-        data.sort(key=sort_key)
-        if sort_dir == "desc":
-            data.reverse()
-
+@app.get("/api/trials/n")
+def list_trials_n():
+    """트라이얼(N) 시트 전용 목록"""
+    meta_mode = (request.args.get("meta") or "exclude").lower()
+    if meta_mode == "only":
+        mode = "meta"
+    elif meta_mode == "include":
+        mode = "all"
+    else:
+        mode = "data"
+    data = read_sheet(SHEET_NAME_N, mode=mode)
+    data = _apply_filters_from_request(data)
     return jsonify({"count": len(data), "items": data})
 
 @app.get("/api/trials/<path:item_id>")
@@ -544,19 +601,19 @@ def get_trial(item_id):
     if is_noise_row(item):
         item["_meta"] = "noise"
 
-    return jsonify(item)
+    # 보정: N시트의 "2차 컨택 (종료일)" → "2차 컨택" 채워주기
+    if "2차 컨택" not in item or not item.get("2차 컨택", ""):
+        if "2차 컨택 (종료일)" in item and item.get("2차 컨택 (종료일)"):
+            item["2차 컨택"] = item.get("2차 컨택 (종료일)", "")
 
-@app.get("/api/trials/meta")
-def list_meta_only():
-    data = read_sheet(SHEET_NAME_Y, mode="meta") + read_sheet(SHEET_NAME_N, mode="meta")
-    return jsonify({"count": len(data), "items": data})
+    return jsonify(item)
 
 @app.route("/api/send", methods=["POST", "OPTIONS"])
 def send_mail():
     """
     body: {
       "id": "트라이얼(Y):5",
-      "template": "eform_plan_change_original.html",
+      "template": "eform_plan_change.html",
       "subject": "(선택) 제목",
       "context": { ... }
     }
@@ -566,7 +623,7 @@ def send_mail():
 
     data = request.get_json(force=True)
     item_id = data.get("id")
-    template_name = data.get("template") or "eform_plan_change_original.html"
+    template_name = data.get("template") or "eform_plan_change.html"
     tpl_meta = next((t for t in TEMPLATE_CATALOG if t["id"] == template_name), None)
     if not tpl_meta:
         return jsonify({"error": f"unknown template: {template_name}"}), 400
@@ -596,7 +653,7 @@ def send_mail():
         "end_date": item.get(COLS["end_date"], ""),
         "item": item,
         "subject": subject,
-        "email": email,
+        "email": email,  # 일부 템플릿에서 계정 ID로 사용
         **DEFAULT_SENDER_CONTEXT,
         **extra_ctx,
     }
@@ -632,7 +689,7 @@ def preview_mail():
     """
     body: {
       "id": "트라이얼(Y):5",
-      "template": "eform_plan_change_original.html",
+      "template": "eform_plan_change.html",
       "subject": "(선택) 제목",
       "context": { ... }
     }
@@ -643,7 +700,7 @@ def preview_mail():
 
     data = request.get_json(force=True)
     item_id = data.get("id")
-    template_name = data.get("template") or "eform_plan_change_original.html"
+    template_name = data.get("template") or "eform_plan_change.html"
     tpl_meta = next((t for t in TEMPLATE_CATALOG if t["id"] == template_name), None)
     if not tpl_meta:
         return jsonify({"error": f"unknown template: {template_name}"}), 400
@@ -686,6 +743,36 @@ def preview_mail():
 @app.get("/api/templates")
 def list_templates():
     return jsonify(TEMPLATE_CATALOG)
+
+@app.get("/api/_debug/sheets")
+def debug_sheets():
+    try:
+        svc = sheets_service()
+        meta = svc.spreadsheets().get(spreadsheetId=SHEET_ID).execute()
+        sheets = [
+            {"title": s["properties"]["title"], "sheetId": s["properties"]["sheetId"]}
+            for s in meta.get("sheets", [])
+        ]
+        out = {"sheets": sheets, "headers": {}}
+        for title in [SHEET_NAME_Y, SHEET_NAME_N]:
+            try:
+                rng = f"{title}!A1:Z1"
+                v = svc.spreadsheets().values().get(spreadsheetId=SHEET_ID, range=rng).execute()
+                out["headers"][title] = v.get("values", [[]])[0] if v.get("values") else []
+            except Exception as e:
+                out["headers"][title] = {"error": str(e)}
+        return jsonify(out)
+    except Exception as e:
+        return jsonify({"error": f"debug failure: {e}"}), 500
+    
+@app.get("/api/_debug/whoami")
+def debug_whoami():
+    try:
+        svc = gmail_service()
+        me = svc.users().getProfile(userId="me").execute()
+        return jsonify({"email": me.get("emailAddress")})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=True)

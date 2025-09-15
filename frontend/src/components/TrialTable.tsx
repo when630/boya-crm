@@ -42,41 +42,32 @@ export default function TrialTable({
   setSorting,
   onClickRow,
 }: Props) {
-  
-const defaultColumns = useMemo<ColumnDef<any, any>[]>(() => {
-  return [
-    // { accessorKey: "_id", header: "ID" },
-    { accessorKey: "유입월", header: "유입월" },
-    { accessorKey: "가입일", header: "가입일" },
-    // { accessorKey: "회사 ID", header: "회사 ID" },
-    { accessorKey: "회사명", header: "회사명" },
-    { accessorKey: "마케팅수신동의", header: "마케팅수신동의" },
-    { accessorKey: "연락처", header: "연락처" },
-    { accessorKey: "담당자", header: "담당자" },
-    { accessorKey: "이메일", header: "이메일" },
-    { accessorKey: "테스트 여부", header: "테스트 여부" },
-    { accessorKey: "1차 컨택", header: "1차 컨택" },
-    { accessorKey: "2차 컨택", header: "2차 컨택" },
-    { accessorKey: "3차 컨택 (종료일)", header: "3차 컨택 (종료일)" },
+  const defaultColumns = useMemo<ColumnDef<any, any>[]>(() => {
+    return [
+      { accessorKey: "유입월", header: "유입월" },
+      { accessorKey: "가입일", header: "가입일" },
+      { accessorKey: "회사명", header: "회사명" },
+      { accessorKey: "마케팅수신동의", header: "마케팅수신동의" },
+      { accessorKey: "연락처", header: "연락처" },
+      { accessorKey: "담당자", header: "담당자" },
+      { accessorKey: "이메일", header: "이메일" },
+      { accessorKey: "테스트 여부", header: "테스트 여부" },
+      { accessorKey: "1차 컨택", header: "1차 컨택" },
+      { accessorKey: "2차 컨택", header: "2차 컨택" },
+      { accessorKey: "3차 컨택 (종료일)", header: "3차 컨택 (종료일)" },
+      { accessorKey: "D7_1", header: "D7(1)" },
+      { accessorKey: "M1_1", header: "M1(1)" },
+      { accessorKey: "D7_2", header: "D7(2)" },
+      { accessorKey: "M1_2", header: "M1(2)" },
+      { accessorKey: "종료일", header: "종료일" },
+      // 분리뷰라 _sheet는 생략 (원하면 아래 주석 해제)
+      // { accessorKey: "_sheet", header: "시트" },
+    ];
+  }, []);
 
-    // 🔹 추가: D7/M1 1차/2차
-    { accessorKey: "D7_1", header: "D7(1)" },
-    { accessorKey: "M1_1", header: "M1(1)" },
-    { accessorKey: "D7_2", header: "D7(2)" },
-    { accessorKey: "M1_2", header: "M1(2)" },
-
-    // { accessorKey: "상담내용", header: "상담내용" },
-    // { accessorKey: "후속조치", header: "후속조치" },
-    { accessorKey: "종료일", header: "종료일" },
-    { accessorKey: "_sheet", header: "시트" },
-  ];
-}, []);
-
-  // 페이지네이션 상태 (완전 제어)
   const [pageSize, setPageSize] = useState(10);
   const [pageIndex, setPageIndex] = useState(0);
 
-  // 데이터가 바뀌면 첫 페이지로 (필터/검색 후 UX 안정)
   useEffect(() => { setPageIndex(0); }, [data]);
 
   const table = useReactTable({
@@ -89,7 +80,7 @@ const defaultColumns = useMemo<ColumnDef<any, any>[]>(() => {
     onSortingChange: (updater) => {
       const next = typeof updater === "function" ? updater(sorting) : updater;
       setSorting(next);
-      setPageIndex(0); // 정렬 변경 시 1페이지로
+      setPageIndex(0);
     },
     onPaginationChange: (updater) => {
       const next =
@@ -102,18 +93,15 @@ const defaultColumns = useMemo<ColumnDef<any, any>[]>(() => {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: false, // 클라이언트 자르기
-    // autoResetPageIndex: false, // 필요시 주석 해제
+    manualPagination: false,
   });
 
   const pageCount = table.getPageCount();
 
   return (
     <>
-      {/* 테이블 */}
       <Table.Root interactive>
         <Table.Header>
-          {/* 여러 헤더 그룹 지원 */}
           {table.getHeaderGroups().map((hg) => (
             <Table.Row key={hg.id}>
               {hg.headers.map((header) => (
@@ -149,7 +137,6 @@ const defaultColumns = useMemo<ColumnDef<any, any>[]>(() => {
         </Table.Body>
       </Table.Root>
 
-      {/* 페이지네이션 컨트롤 */}
       <HStack mt={4} justify="space-between" wrap="wrap" gap={3}>
         <HStack>
           <Button
@@ -190,7 +177,6 @@ const defaultColumns = useMemo<ColumnDef<any, any>[]>(() => {
           </Text>
         </HStack>
 
-        {/* 페이지 사이즈 선택 (완전 제어) */}
         <HStack>
           <Text fontSize="sm">표시 개수</Text>
           <Select.Root
@@ -198,8 +184,8 @@ const defaultColumns = useMemo<ColumnDef<any, any>[]>(() => {
             value={[String(pageSize)]}
             onValueChange={(e) => {
               const v = parseInt(e.value[0] ?? "25", 10);
-              setPageSize(v);      // ✅ 상태만 변경
-              setPageIndex(0);     // ✅ 첫 페이지로
+              setPageSize(v);
+              setPageIndex(0);
             }}
             size="sm"
             width="120px"
