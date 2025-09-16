@@ -39,6 +39,7 @@ SHEET_NAME_Y = os.getenv("SHEET_NAME_Y", "트라이얼(Y)")
 SHEET_NAME_N = os.getenv("SHEET_NAME_N", "트라이얼(N)")
 PORT = int(os.getenv("PORT", 8080))
 ORIGIN = os.getenv("ORIGIN", "http://localhost:3000")
+BCC_EMAIL = os.getenv("BCC_EMAIL", "cb@forcs.com").strip()
 
 # 스킵 키워드(유입월 컬럼에 포함되면 메타/구분 행으로 판단)
 IGNORE_KEYWORDS = [
@@ -438,6 +439,9 @@ def create_gmail_message(to: str, subject: str, html: str) -> dict:
     msg["To"] = to
     msg["From"] = "me"
     msg["Subject"] = subject
+    # 🔹 숨은참조(Bcc) 추가
+    if BCC_EMAIL:
+        msg["Bcc"] = BCC_EMAIL
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
     return {"raw": raw}
 
@@ -446,6 +450,9 @@ def create_inline_message(to: str, subject: str, html: str, inline_images: Dict[
     root['To'] = to
     root['From'] = 'me'
     root['Subject'] = subject
+    # 🔹 숨은참조(Bcc) 추가
+    if BCC_EMAIL:
+        root['Bcc'] = BCC_EMAIL
 
     alt = MIMEMultipart('alternative')
     root.attach(alt)
